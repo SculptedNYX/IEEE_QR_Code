@@ -1,9 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ieee_qr_code/Pages/adminPage.dart';
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:ieee_qr_code/Pages/userPage.dart';
-import 'package:toggle_switch/toggle_switch.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -111,57 +109,49 @@ class _LoginPageState extends State<LoginPage> {
 
           SizedBox(
             width: 250,
-            child: AnimatedButton(
-              text: "LOGIN",
-              color: Colors.blue[900],
-              pressEvent: (){
-                AwesomeDialog(
-                  context: context,
-                  dialogType: DialogType.question,
-                  title: "CONFIRM?",
-                  showCloseIcon: true,
-                  animType: AnimType.scale,
-                  btnOkText: "YES!",
-                  btnCancelText: "NO!",
-                  btnOkOnPress: (){
-                    setState(() async{
-                      try {
+            child: TextButton(
+              style: TextButton.styleFrom(
+                  fixedSize: const Size(double.maxFinite, 50),
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue.shade900,
+                  textStyle:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  shape: (RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      side: BorderSide(color: Colors.blue.shade900)))),
+              onPressed: () async {
+                try {
+                  String emailData = emailController.text;
+                  String passwordData = passwordController.text;
 
-                        String emailData = emailController.text;
-                        String passwordData = passwordController.text;
+                  var re = RegExp(r'@admin.com');
+                  // var re2 = RegExp(r'@dev.com');
 
-                        var re = RegExp(r'@admin.com');
+                  final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+                    email: emailData,
+                    password: passwordData,
+                  );
 
-                        var re2 = RegExp(r'@dev.com');
-
-                        final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-                          email: emailData,
-                          password: passwordData,
-                        );
-
-                        if(re.hasMatch(emailData))
-                          {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPage()),);
-                          }
-                        else
-                          {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPage()),);
-
-                          }
-                      } on FirebaseAuthException catch (e) {
-                        if (e.code == 'weak-password') {
-                          print('The password provided is too weak.');
-                        } else if (e.code == 'email-already-in-use') {
-                          print('The account already exists for that email.');
-                        }
-                      } catch (e) {
-                        print(e);
-                      }
-                    });
+                  if(re.hasMatch(emailData)) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPage()),);
                   }
-                ).show();
-              } ,
-            ),
+                  else {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPage()),);
+                  }
+                }
+                on FirebaseAuthException catch (e) {
+                  if (e.code == 'weak-password') {
+                    print('The password provided is too weak.');
+                  } else if (e.code == 'email-already-in-use') {
+                    print('The account already exists for that email.');
+                  }
+                  else {
+                    if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid name or password")));}
+                  }
+                }
+              }, child: Text("LOGIN"),
+              
+            )
           )
 
         ],

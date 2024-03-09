@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ieee_qr_code/Pages/userPage.dart';
 import 'package:ieee_qr_code/api/sheets/sheets_api.dart';
@@ -61,8 +60,7 @@ class _QrCodePageState extends State<QrCodePage> {
                 Icons.arrow_back,
                 color: Colors.white),
             onPressed: (){
-              setState(() async {
-                await FirebaseAuth.instance.signOut();
+              setState(() {
                 Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const UserPage()), (route) => false);
               });
             },

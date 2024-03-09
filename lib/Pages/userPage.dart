@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:ieee_qr_code/Pages/LoginPage.dart';
 import 'package:ieee_qr_code/Pages/pre_scan_page.dart';
 import 'package:ieee_qr_code/Widgets/event_card.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -23,8 +25,9 @@ class _UserPageState extends State<UserPage> {
                 Icons.arrow_back,
                 color: Colors.white),
             onPressed: (){
-              setState(() {
-                Navigator.pop(context);
+              setState(() async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginPage()), (route) => false);
               });
             },
           ),
