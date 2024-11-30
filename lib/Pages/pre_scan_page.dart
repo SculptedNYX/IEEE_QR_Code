@@ -5,28 +5,38 @@ import 'package:ieee_qr_code/api/sheets/sheets_api.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 
 class PreScan extends StatefulWidget {
-  final QueryDocumentSnapshot eventDoc;
-  const PreScan({super.key, required this.eventDoc});
+  // This is the object for the whole document IE: worksheets included
+  final QueryDocumentSnapshot eventDocument;
+  const PreScan({super.key, required this.eventDocument});
   @override
   State<PreScan> createState() => _PreScanState();
 }
 
 class _PreScanState extends State<PreScan> {
-  late String selectedSheet;
-  late String selectedColumn;
-  bool isSheetSelected = false;
-  bool isColumnSelected = false;
+  // The keep track of the selected WorkSheet
+  late String selectedWorkSheet;
+  late String selectedColumnToCheckBox;
+
+  // We start the page without any selected sheet or column so initialize them with false
+  bool isWorkSheetSelected = false;
+  bool isColumnToCheckBoxSelected = false;
 
   @override
   Widget build(BuildContext context) {
-    List<String> sheets = widget.eventDoc['WorkSheets'].keys.toList();
-    if(!isSheetSelected) {
-      selectedSheet = sheets[0];
+    // Make a list of all the worksheets
+    List<String> WorkSheetList = widget.eventDocument['WorkSheets'].keys.toList();
+
+    if(!isWorkSheetSelected) {
+      selectedWorkSheet = WorkSheetList[0];
     }
-    List<dynamic> columns = widget.eventDoc['WorkSheets'][selectedSheet];
-    if(!isColumnSelected) {
-      selectedColumn = columns[0];
+
+    // Make a list of all the columns in the selected worksheet above
+    List<dynamic> CheckBoxColumns = widget.eventDocument['WorkSheets'][selectedWorkSheet];
+
+    if(!isColumnToCheckBoxSelected) {
+      selectedColumnToCheckBox = CheckBoxColumns[0];
     }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -49,7 +59,7 @@ class _PreScanState extends State<PreScan> {
           ),
         ),
       ),
-      body: LoaderOverlay(
+      body: LoaderOverlay( // A cool thing to do a loading screen when the button is pressed
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(
@@ -64,14 +74,14 @@ class _PreScanState extends State<PreScan> {
                   iconEnabledColor: Colors.white,
                   dropdownColor: Colors.lightBlue,
                   underline: const SizedBox(),
-                  value: selectedSheet,
-                  items: sheets.map((sheet) {return DropdownMenuItem(value: sheet, child: Text(sheet, style: const TextStyle(color: Colors.white)));}).toList(),
+                  value: selectedWorkSheet,
+                  items: WorkSheetList.map((sheet) {return DropdownMenuItem(value: sheet, child: Text(sheet, style: const TextStyle(color: Colors.white)));}).toList(),
                   onChanged: (value) {
                     setState(() {
-                      selectedSheet = value!;
-                      columns = widget.eventDoc['WorkSheets'][selectedSheet];
-                      isSheetSelected = true;
-                      isColumnSelected = false;
+                      selectedWorkSheet = value!;
+                      CheckBoxColumns = widget.eventDocument['WorkSheets'][selectedWorkSheet];
+                      isWorkSheetSelected = true;
+                      isColumnToCheckBoxSelected = false;
                     });
                   },
                 ),
@@ -86,17 +96,18 @@ class _PreScanState extends State<PreScan> {
                   iconEnabledColor: Colors.white,
                   dropdownColor: Colors.lightBlue,
                   underline: const SizedBox(),
-                  value: selectedColumn,
-                  items: columns.map((columns) {return DropdownMenuItem(value: columns, child: Text(columns, style: const TextStyle(color: Colors.white)));}).toList(),
+                  value: selectedColumnToCheckBox,
+                  items: CheckBoxColumns.map((columns) {return DropdownMenuItem(value: columns, child: Text(columns, style: const TextStyle(color: Colors.white)));}).toList(),
                   onChanged: (value) {
                     setState(() {
-                      selectedColumn = value!.toString();
-                      isColumnSelected = true;
+                      selectedColumnToCheckBox = value!.toString();
+                      isColumnToCheckBoxSelected = true;
                     });
                   },
                 ),
               ),
               const Spacer(),
+              // The start scan button
               TextButton(
                 style: TextButton.styleFrom(
                     fixedSize: const Size(double.maxFinite, 50),
@@ -108,17 +119,21 @@ class _PreScanState extends State<PreScan> {
                         borderRadius: BorderRadius.circular(15),
                         side: BorderSide(color: Colors.blue.shade900)))),
                 onPressed: () async {
-                  context.loaderOverlay.show();
-                  String? ssID = SheetsApi.getSheetIdFromUrl(widget.eventDoc['sheetUrl']);
-                  int targetColumn = await SheetsApi.headerNameToIndex(ssID, selectedSheet, selectedColumn);
-                  List<int> qrIndex = [];
-                  for (int i = 0; i <widget.eventDoc['QrCols'].length; i++) {
-                    qrIndex.add(await SheetsApi.headerNameToIndex(ssID, selectedSheet, widget.eventDoc['QrCols'][i]));
+                  context.loaderOverlay.show(); // Show the loading overlay
+
+                  String? ssID = SheetsApi.getSheetIdFromUrl(widget.eventDocument['sheetUrl']); // The sheet ssID is used to identify the exact document from google sheets
+                  int targetColumn = await SheetsApi.headerNameToIndex(ssID, selectedWorkSheet, selectedColumnToCheckBox); // Converts the name of the column to it's index in the columns
+
+                  // Prepare all the columns to be searched
+                  List<int> QRSearchColumns = [];
+                  for (int i = 0; i <widget.eventDocument['QrCols'].length; i++) {
+                    QRSearchColumns.add(await SheetsApi.headerNameToIndex(ssID, selectedWorkSheet, widget.eventDocument['QrCols'][i]));
                   }
                   if(context.mounted){
                     SheetsApi.init(ssID);
-                    SheetsApi.updateRowsLocal(selectedSheet);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => QrCodePage(ssID: ssID!, checkName: selectedColumn ,workSheet: selectedSheet, qrColumns: qrIndex, checkColumn: targetColumn,)),);}
+                    SheetsApi.updateRowsLocal(selectedWorkSheet);
+                    SheetsApi.searchTerms = await SheetsApi.getSearchTerms(selectedWorkSheet, QRSearchColumns);
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => QrCodePage(ssID: ssID!, checkName: selectedColumnToCheckBox ,workSheet: selectedWorkSheet, qrColumns: QRSearchColumns, checkColumn: targetColumn,)),);}
                 },
                 child: const Text('Start Scan'),
               ),

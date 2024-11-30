@@ -69,7 +69,7 @@ class _AdminPageState extends State<AdminPage> {
                         actions: [
                           TextButton(onPressed: (){
                             Navigator.of(context).pop();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => PreScan(eventDoc: eventDocuments[index])),);
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => PreScan(eventDocument: eventDocuments[index])),);
                             }, child: Text("Scan", style: TextStyle(color: Colors.blue.shade900, fontSize: 15, fontWeight: FontWeight.bold),)),
                           TextButton(onPressed: (){}, child: const Text("Edit", style: TextStyle(color: Colors.green, fontSize: 15, fontWeight: FontWeight.bold),)),
                           TextButton(onPressed: (){

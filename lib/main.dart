@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:ieee_qr_code/Pages/LoginPage.dart';
 import 'package:ieee_qr_code/Pages/userPage.dart';
 
+import 'Pages/testqr.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();

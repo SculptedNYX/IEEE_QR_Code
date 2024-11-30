@@ -8,19 +8,25 @@ class SheetsApi {
   static late Spreadsheet spreadsheet;
   static late List<Worksheet> workSheets;
   static late List<List<String>> allRows;
+  static late List<String> searchTerms;
 
-  static Future<bool> scanQRtoSheet(String? ssID, String workSheet, String data, List<int> searchColumnIndex, int checkColumn) async {
+  static Future<bool> scanQRtoSheet(String workSheet, int checkColumn, rowIndex, String targetState) async {
     Worksheet? ws = spreadsheet.worksheetByTitle(workSheet);
-    int rowIndex = await getRowByValues(ws, searchColumnIndex, data.split(","));
-    if (rowIndex != -1){
-      setCheckBoxCellTrue(spreadsheet.worksheetByTitle(workSheet), checkColumn, rowIndex+1);
-      return true;
-    }
-    else {
+    if (ws == null) {
       return false;
     }
+
+    // Check that the cell isn't out of bounds
+    if (ws.columnCount < checkColumn || ws.rowCount < (rowIndex+1) || (rowIndex+1) < 1 || checkColumn < 1) {
+      print("Coordinates of cell out of bounds");
+      return false;
+    }
+
+    ws.values.insertValue(targetState, column: checkColumn, row: rowIndex+1);
+    return true;
   }
 
+  // Kinda legacy code that adds the qr code encoding as text within the sheet (yeah doesn't make sense i know)
   static Future<bool> addQRtoSheet(String? ssID, String workSheet, List<int> qrParameterColumns) async {
     // Inits the connection with the sheet
     if (!await init(ssID)) {
@@ -65,7 +71,7 @@ class SheetsApi {
     return true;
   }
 
-  // Extracts id from the part of the url that is between d/ and /edit
+  // Extracts id from the part of the url that is between d/ and /edit (SIMPLE PARSER)
   static String? getSheetIdFromUrl(String url) {
     var re = RegExp(r'(?<=d/)(.*)(?=/edit)');
     var match = re.firstMatch(url);
@@ -78,7 +84,7 @@ class SheetsApi {
     }
   }
 
-  // Inits the sheet variables that as in selects which sheet is used basically
+  // Inits the sheet variables
   static Future<bool> init(String? ssID) async {
     // Handles empty sheet id
     if (ssID!.isEmpty){
@@ -127,23 +133,30 @@ class SheetsApi {
   }
 
   // Sets the checkbox as true
-  static void setCheckBoxCellTrue(Worksheet? ws, int columnIndex, int rowIndex) async{
+  static Future<int> CheckBoxCell(String workSheet, int columnIndex, int rowIndex) async{
+    Worksheet? ws = spreadsheet.worksheetByTitle(workSheet);
     // Handles worksheet not existing
     if (ws == null) {
-      print("work sheet doesn;t exist");
-      return;
+      print("work sheet doesn't exist");
+      return -1;
     }
 
-    // Check that the cell isnt out of bounds
+    // Check that the cell isn't out of bounds
     if (ws.columnCount < columnIndex || ws.rowCount < rowIndex || rowIndex < 1 || columnIndex < 1) {
       print("Coordinates of cell out of bounds");
-      return;
+      return -1;
     }
 
     // Makes sure the field is false already so it doesn't override non checkbox fields
-    if (await ws.values.value(column: columnIndex, row: rowIndex) == 'false') {
-      ws.values.insertValue("true", column: columnIndex, row: rowIndex);
+    String checkBoxState = await ws.values.value(column: columnIndex, row: rowIndex);
+    if (checkBoxState == 'false') {
+      return 0;
     }
+    else if (checkBoxState == 'true') {
+      return 1;
+    }
+
+    return -1;
   }
 
   // Update the rows locally
@@ -152,8 +165,38 @@ class SheetsApi {
     allRows = (await ws?.values.allRows())!;
   }
 
+  static Future<List<String>> getSearchTerms(String workSheet, List<int> columns) async {
+    // Get the worksheet
+    Worksheet? ws = spreadsheet.worksheetByTitle(workSheet);
+
+    // Fetch all the rows from the sheet
+    List<List<String>> allRows = await ws!.values.allRows();
+
+    // Initialize a list to store the result
+    List<String> rowsWithinColumns = [];
+
+    // Loop through each row, starting from the second row (index 1)
+    for (var i = 1; i < allRows.length; i++) {
+      var row = allRows[i];
+
+      // Extract values from the specified columns
+      List<String> filteredColumns = [];
+      for (var colIndex in columns) {
+        // Ensure the column index is valid within the row
+        if (colIndex > 0 && colIndex <= row.length) {
+          filteredColumns.add(row[colIndex - 1]); // Adjust for 0-based index
+        }
+      }
+      // Join the filtered column values with a comma
+      rowsWithinColumns.add(filteredColumns.join(','));
+    }
+
+    return rowsWithinColumns;
+  }
+
   // This function takes a list of columns to search through with the list of values and returns the row that matches all values in the columns
-  static Future<int> getRowByValues(Worksheet? ws, List<int> searchColumnIndex, List<String> searchColumnValue) async{
+  static Future<int> getRowByValues(String workSheet, List<int> searchColumnIndex, List<String> searchColumnValue) async{
+    Worksheet? ws = spreadsheet.worksheetByTitle(workSheet);
     // Handles worksheet not existing
     if (ws == null) {
       print("work sheet doesn't exist");

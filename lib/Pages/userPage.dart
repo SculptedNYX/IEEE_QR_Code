@@ -50,11 +50,13 @@ class _UserPageState extends State<UserPage> {
               var events = snapshot.data;
               List eventDocuments = [];
               for(var i in events!.docs) {
-                eventDocuments.add(i);
+                if(!i['hide']){
+                  eventDocuments.add(i);
+                }
               }
               return ListView.separated(
                 separatorBuilder: (context, index) => const SizedBox(height: 5,),
-                itemCount: events.size,
+                itemCount: eventDocuments.length,
                 itemBuilder: (context, index) {
                   return EventCard(text: eventDocuments[index]['name'], imageUrl: eventDocuments[index]['iconUrl'], onPressed: (){
                     showDialog(context: context, builder: (context) {
@@ -64,7 +66,7 @@ class _UserPageState extends State<UserPage> {
                         actions: [
                           TextButton(onPressed: (){
                             Navigator.of(context).pop();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => PreScan(eventDoc: eventDocuments[index])),);
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => PreScan(eventDocument: eventDocuments[index])),);
                           }, child: Text("Scan", style: TextStyle(color: Colors.blue.shade900, fontSize: 15, fontWeight: FontWeight.bold),)),
                         ],
                       );
